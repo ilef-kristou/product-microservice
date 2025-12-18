@@ -10,10 +10,7 @@ import org.springframework.web.client.RestTemplate;
 import tn.fst.spring.productmicroservice.entities.Product;
 import tn.fst.spring.productmicroservice.repositories.ProductRepository;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/products")
@@ -30,30 +27,41 @@ public class ProductController {
 
     private final String USER_SERVICE_BASE_URL = "http://user-microservice/users";
 
-    // --- GET all products réel avec Resilience4j ---
+    // --- GET all products ---
     @GetMapping
     @Retry(name = "myRetry", fallbackMethod = "fallbackGetAllProducts")
     @RateLimiter(name = "myRateLimiter", fallbackMethod = "fallbackGetAllProducts")
     @CircuitBreaker(name = "productmicroService", fallbackMethod = "fallbackGetAllProducts")
     public List<Product> getAllProducts() {
+        System.out.println("getAllProducts appelé à " + new Date());
 
-        List<Product> productsFromDb = productRepository.findAll();
+        // Récupère les produits et ajoute le port à CHACUN
+        List<Product> products = productRepository.findAll();
         List<Product> productsWithPort = new ArrayList<>();
 
-        if (productsFromDb.isEmpty()) {
-            Product emptyProduct = new Product();
-            emptyProduct.setName("No products found (port " + serverPort + ")");
-            productsWithPort.add(emptyProduct);
-        } else {
-            for (Product p : productsFromDb) {
-                productsWithPort.add(copyProductWithPort(p));
-            }
+        for (Product product : products) {
+            productsWithPort.add(copyProductWithPort(product));
         }
+
         return productsWithPort;
     }
 
+    // Fallback pour getAllProducts - avec port aussi
+    public List<Product> fallbackGetAllProducts(Throwable e) {
+        System.out.println("FALLBACK getAllProducts activé: " + e.getMessage());
+
+        List<Product> fallbackList = new ArrayList<>();
+        Product fallbackProduct = new Product();
+        fallbackProduct.setId(-1L);
+        fallbackProduct.setName("Service temporairement indisponible (port " + serverPort + ")");
+        fallbackProduct.setPrice(0.0);
+        fallbackList.add(fallbackProduct);
+
+        return fallbackList;
+    }
+
     @GetMapping("/{id}")
-    public Product getProductById(@PathVariable UUID id) {
+    public Product getProductById(@PathVariable Long id) {
         return productRepository.findById(id)
                 .map(this::copyProductWithPort)
                 .orElse(null);
@@ -66,7 +74,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public Product updateProduct(@PathVariable UUID id, @RequestBody Product product) {
+    public Product updateProduct(@PathVariable Long id, @RequestBody Product product) {
         return productRepository.findById(id)
                 .map(p -> {
                     product.setId(id);
@@ -77,7 +85,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public String deleteProduct(@PathVariable UUID id) {
+    public String deleteProduct(@PathVariable Long id) {
         if (productRepository.existsById(id)) {
             productRepository.deleteById(id);
             return "Deleted product " + id + " on port " + serverPort;
@@ -92,15 +100,6 @@ public class ProductController {
         return users;
     }
 
-    // --- Méthode fallback pour Resilience4j ---
-    public List<Product> fallbackGetAllProducts(Exception e) {
-        List<Product> fallbackList = new ArrayList<>();
-        Product fallbackProduct = new Product();
-        fallbackProduct.setName("Service indisponible – veuillez réessayer plus tard");
-        fallbackList.add(fallbackProduct);
-        return fallbackList;
-    }
-
     // --- Méthode utilitaire pour copier un produit et ajouter le port ---
     private Product copyProductWithPort(Product p) {
         Product copy = new Product();
@@ -108,5 +107,27 @@ public class ProductController {
         copy.setName(p.getName() + " (port " + serverPort + ")");
         copy.setPrice(p.getPrice());
         return copy;
+    }
+
+    // --- Endpoint de test Resilience4j ---
+    @GetMapping("/test/rate-limiter")
+    @RateLimiter(name = "myRateLimiter", fallbackMethod = "testRateLimiterFallback")
+    public String testRateLimiter() {
+        return "Requête acceptée à " + new Date() + " (port " + serverPort + ")";
+    }
+
+    public String testRateLimiterFallback(Throwable e) {
+        return "⏸️ Rate limit atteint ! Veuillez patienter. " + new Date() + " (port " + serverPort + ")";
+    }
+
+    @GetMapping("/test/retry")
+    @Retry(name = "myRetry", fallbackMethod = "testRetryFallback")
+    public String testRetry() {
+        System.out.println("Tentative testRetry à " + new Date());
+        return "✅ Succès après retry à " + new Date() + " (port " + serverPort + ")";
+    }
+
+    public String testRetryFallback(Throwable e) {
+        return "❌ Échec après 3 tentatives. Erreur: " + e.getMessage() + " (port " + serverPort + ")";
     }
 }

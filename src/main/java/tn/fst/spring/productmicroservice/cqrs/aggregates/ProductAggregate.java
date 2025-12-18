@@ -6,17 +6,14 @@ import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.spring.stereotype.Aggregate;
 import static org.axonframework.modelling.command.AggregateLifecycle.apply;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import tn.fst.spring.productmicroservice.cqrs.commands.CreateProductCommand;
 import tn.fst.spring.productmicroservice.cqrs.events.ProductCreatedEvent;
-import tn.fst.spring.productmicroservice.entities.Product;
-import tn.fst.spring.productmicroservice.repositories.ProductRepository;
 
 @Aggregate
 public class ProductAggregate {
 
     @AggregateIdentifier
-    private String id;
+    private Long id;  // Changé en Long
     private String name;
     private double price;
 
@@ -30,7 +27,7 @@ public class ProductAggregate {
 
     @EventSourcingHandler
     public void on(ProductCreatedEvent event) {
-        this.id = String.valueOf(event.getId());
+        this.id = event.getId();
         this.name = event.getName();
         this.price = event.getPrice();
     }

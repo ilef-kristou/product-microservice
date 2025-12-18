@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class ProductService {
@@ -22,7 +21,7 @@ public class ProductService {
         return repository.findAll();
     }
 
-    public Optional<Product> getProductById(UUID id) {
+    public Optional<Product> getProductById(Long id) {
         return repository.findById(id);
     }
 
@@ -30,17 +29,34 @@ public class ProductService {
         return repository.save(product);
     }
 
-    public Product updateProduct(UUID id, Product product) {
+    public Product updateProduct(Long id, Product product) {
         return repository.findById(id)
                 .map(p -> {
                     p.setName(product.getName());
                     p.setPrice(product.getPrice());
                     return repository.save(p);
                 })
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
     }
 
-    public void deleteProduct(UUID id) {
-        repository.deleteById(id);
+    public void deleteProduct(Long id) {
+        if (repository.existsById(id)) {
+            repository.deleteById(id);
+        } else {
+            throw new RuntimeException("Product not found with id: " + id);
+        }
+    }
+
+    // Méthodes supplémentaires utiles
+    public boolean productExists(Long id) {
+        return repository.existsById(id);
+    }
+
+    public long countProducts() {
+        return repository.count();
+    }
+
+    public void deleteAllProducts() {
+        repository.deleteAll();
     }
 }

@@ -5,9 +5,7 @@ import org.axonframework.queryhandling.QueryGateway;
 import org.springframework.web.bind.annotation.*;
 import tn.fst.spring.productmicroservice.entities.Product;
 import tn.fst.spring.productmicroservice.cqrs.commands.CreateProductCommand;
-import tn.fst.spring.productmicroservice.cqrs.queries.GetProductByIdQuery;
 
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -23,21 +21,13 @@ public class ProductCommandController {
     }
 
     @PostMapping
-    public String createProduct(@RequestBody Product product) {
-        String id = UUID.randomUUID().toString();  // Génère un ID unique
+    public Long createProduct(@RequestBody Product product) {
+        // Génère un ID temporaire ou utilise null (la BD générera l'ID via auto-increment)
         CreateProductCommand command = new CreateProductCommand(
-                id,                      // <-- ID obligatoire
+                null,  // L'ID sera généré par la base de données
                 product.getName(),
                 product.getPrice()
         );
-        commandGateway.sendAndWait(command);          // Envoi de la commande à l’aggregate
-        return id;                                    // Retourne l’ID créé
-    }
-
-    @GetMapping("/{id}")
-    public CompletableFuture<Product> getProductById(@PathVariable String id) {
-        // Crée un objet GetProductByIdQuery avec l'ID
-        GetProductByIdQuery query = new GetProductByIdQuery(id);
-        return queryGateway.query(query, Product.class);
+        return commandGateway.sendAndWait(command); // Retourne l'ID généré
     }
 }

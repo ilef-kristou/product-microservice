@@ -1,13 +1,13 @@
 package tn.fst.spring.productmicroservice.cqrs.queries;
 
 public class GetProductByIdQuery {
-    private String id; // ou UUID id;
+    private final Long id;  // Changé en Long
 
-    public GetProductByIdQuery(String id) {
+    public GetProductByIdQuery(Long id) {
         this.id = id;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 }

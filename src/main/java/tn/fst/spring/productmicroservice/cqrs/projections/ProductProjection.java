@@ -9,8 +9,6 @@ import tn.fst.spring.productmicroservice.entities.Product;
 import tn.fst.spring.productmicroservice.repositories.ProductRepository;
 import tn.fst.spring.productmicroservice.cqrs.queries.GetProductByIdQuery;
 
-import java.util.UUID;
-
 @Component
 public class ProductProjection {
 
@@ -20,7 +18,7 @@ public class ProductProjection {
     @EventHandler
     public void on(ProductCreatedEvent event) {
         Product product = new Product();
-        product.setId(event.getId()); // si ton ID est long
+        product.setId(event.getId()); // ID Long
         product.setName(event.getName());
         product.setPrice(event.getPrice());
         productRepository.save(product);
@@ -28,8 +26,6 @@ public class ProductProjection {
 
     @QueryHandler
     public Product handle(GetProductByIdQuery query) {
-        UUID id = UUID.fromString(query.getId());
-        return productRepository.findById(id).orElse(null);
+        return productRepository.findById(query.getId()).orElse(null);
     }
-
 }
