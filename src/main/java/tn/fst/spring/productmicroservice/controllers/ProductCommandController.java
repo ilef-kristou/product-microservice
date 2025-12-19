@@ -3,6 +3,7 @@ package tn.fst.spring.productmicroservice.controllers;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.queryhandling.QueryGateway;
 import org.springframework.web.bind.annotation.*;
+import tn.fst.spring.productmicroservice.cqrs.queries.GetProductByIdQuery;
 import tn.fst.spring.productmicroservice.entities.Product;
 import tn.fst.spring.productmicroservice.cqrs.commands.CreateProductCommand;
 
@@ -14,20 +15,37 @@ public class ProductCommandController {
 
     private final CommandGateway commandGateway;
     private final QueryGateway queryGateway;
+    private long tempId = 1L;
 
-    public ProductCommandController(CommandGateway commandGateway, QueryGateway queryGateway) {
+    public ProductCommandController(CommandGateway commandGateway , QueryGateway queryGateway) {
         this.commandGateway = commandGateway;
         this.queryGateway = queryGateway;
     }
 
     @PostMapping
-    public Long createProduct(@RequestBody Product product) {
-        // Génère un ID temporaire ou utilise null (la BD générera l'ID via auto-increment)
+    public String createProduct(@RequestBody Product product) {
+        // Utiliser UNIQUEMENT des nombres
+        Long productId = System.currentTimeMillis() % 1000000;  // Juste un nombre
+
+        double price = product.getPrice() != null ? product.getPrice() : 0.0;
+
         CreateProductCommand command = new CreateProductCommand(
-                null,  // L'ID sera généré par la base de données
-                product.getName(),
-                product.getPrice()
+                String.valueOf(productId),  // Long, pas String
+                product.getName() != null ? product.getName() : "Produit",
+                price
         );
-        return commandGateway.sendAndWait(command); // Retourne l'ID généré
+
+        try {
+            commandGateway.sendAndWait(command);
+            return "Produit créé avec ID: " + productId;
+        } catch (Exception e) {
+            return "Erreur: " + e.getMessage();
+        }
+    }
+
+    @GetMapping("/{id}")
+    public CompletableFuture<Product> getProductById(@PathVariable Long id) {
+        GetProductByIdQuery query = new GetProductByIdQuery(id);
+        return queryGateway.query(query, Product.class);
     }
 }

@@ -9,8 +9,8 @@ public class CreateProductCommand {
     private final String name;
     private final double price;
 
-    public CreateProductCommand(Long id, String name, double price) {
-        this.id = id;
+    public CreateProductCommand(String id, String name, double price) {
+        this.id = Long.valueOf(id);
         this.name = name;
         this.price = price;
     }
